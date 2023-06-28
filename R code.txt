@@ -1,0 +1,298 @@
+# to set the working directory
+setwd("C:/Users/HP/Documents/Applied Digital health/dissertation/Data")
+data <- read.csv("newdata.csv")
+library(tidyverse)
+library(ggpubr)
+library(rstatix)
+library(ggplot2)
+############
+
+######POWER CALCULATION
+library(pwr)
+
+pwr.t2n.test(d = 0.5 , n1 = 352, sig.level = 0.05, power = 0.8 )
+
+pwr.f2.test(u = 5, f2 = 0.2/(1 - 0.20), sig.level = 0.05, power = 0.8)
+
+
+######missing values 
+#removing GP practices with no information
+columnsofinterest <- c("TOTAL_PATIENTS", "TOTAL_GP_HC" , "TOTAL_NURSES_HC" , "weighted.mean.IMDScore..All.Ages." ,  "gpsover60", "gpsintraining" , "under5s" , "under65s" , "over65s")
+database_inc <- dat[rowSums(is.na(dat[, columnsofinterest ])) < length(columnsofinterest), ]
+database_inc$TOTAL_NURSES
+dat$TOTAL_NURSES <- as.numeric(dat$TOTAL_NURSES_HC)
+
+###imputation
+install.packages("mice")
+library("mice")
+columns <- c("TOTAL_NURSES" , "weighted.mean.IMDScore.All.Ages..")
+imputation_object <- mice(imputed_data, method = "pmm", m = 5)
+imputed_dat <- complete(imputation_object)
+
+
+
+#####################
+
+
+#####Descriptive Stats
+######DENSITY MAP
+
+
+#Load dataset
+database <- read.csv("final dataset.csv")
+
+
+#####install ggmap
+
+install.packages("ggmap")
+
+library("ggmap")
+
+###google maps API key for use of ggmap function
+
+register_google(key = "AIzaSyAq4RdZsD5wEYXLJC9IC4YmLyM4-4nY5yw")
+
+
+####use geocode function to create latitude and longitudes
+names(combo)
+combo <- combo[complete.cases(combo[, c("TOTAL_PATIENTS", "TOTAL_GP_HC" , "TOTAL_NURSES_HC" , "weighted.mean.IMDScore..All.Ages." , "POSTCODE" , "activity")]), ]
+
+####insert the results of geocode into the combo dataframe
+combo$longitude <- NA
+combo$latitude <- NA 
+
+for(i in 1:nrow(combo)){geocode_result <- geocode(combo$POSTCODE[i])
+if(!is.na(geocode_result$lon) && !is.na(geocode_result$lat)){
+  combo$longitude[i] <- geocode_result$lon 
+  combo$latitude[i] <- geocode_result$lat}}
+
+
+###Obtain a base map using ggmap
+uk_map <- get_map(location = "England", zoom = 7)
+
+# Create the dot density map
+dot_map <- ggmap(uk_map) +
+  geom_point(data = network, aes(x = longitude, y = latitude, size = TOTAL_PATIENTS, color = activity), alpha = 1) +
+  scale_size_continuous(range = c(1, 5)) +
+  scale_color_manual(values = c("2" = "red", "1" = "blue")) +
+  labs(title = "Dot Density Map of GP Practices",
+       x = "Longitude", y = "Latitude",
+       size = "Registered Patients", color = "Activity Status")
+
+
+# Display the dot density map
+print(dot_map)
+
+##Table1
+
+library(tableone)
+
+final$activity <- as.factor(ifelse(final$Signedup.x == 0 & final$Active.y == 0, 0,
+                                   ifelse(final$Signedup.x == 1 & final$Active.y == 0, 1,
+                                          ifelse(final$Signedup.x == 1 & final$Active.y == 1, 2,NA))))
+final$activity <- factor(final$activity, levels=c(0,1,2), labels = c("Not Signed Up", "Inactive", "Active")) 
+
+
+final$gpsintraining <- final$TOTAL_GP_TRN_GR_ST1_HC + final$TOTAL_GP_TRN_GR_ST2_HC + final$TOTAL_GP_TRN_GR_ST3_HC
++ final$TOTAL_GP_TRN_GR_ST4_HC + final$TOTAL_GP_TRN_GR_OTH_HC + final$TOTAL_GP_TRN_GR_F1_2_HC
+
+database$region1 <- as.factor(ifelse(database$REGION_NAME == "North East and Yorkshire", 0,
+                                     ifelse(database$REGION_NAME == "North West", 1,
+                                            ifelse(database$REGION_NAME == "Midlands", 2,
+                                                   ifelse(database$REGION_NAME == "East of England", 3,
+                                                          ifelse(database$REGION_NAME == "London", 4,
+                                                                 ifelse(database$REGION_NAME == "South East", 5,
+                                                                        ifelse(database$REGION_NAME == "South West", 6, NA))))))))
+
+final$under5s <- final$MALE_PATIENTS_0TO4 + final$FEMALE_PATIENTS_0TO4
+
+final$under65s <- final$MALE_PATIENTS_15TO44 + final$MALE_PATIENTS_45TO64 + final$MALE_PATIENTS_5TO14
++ final$FEMALE_PATIENTS_5TO14 + final$FEMALE_PATIENTS_15TO44 + final$FEMALE_PATIENTS_45TO64
+final$over65s <- final$MALE_PATIENTS_65TO74 + final$MALE_PATIENTS_75TO84 + final$MALE_PATIENTS_85PLUS + final$FEMALE_PATIENTS_65TO74 + final$FEMALE_PATIENTS_75TO84 + final$FEMALE_PATIENTS_85PLUS
+
+final$gpsunder60 <- final$TOTAL_GP_HC_UNDER30 + final$TOTAL_GP_HC_30TO34 + final$TOTAL_GP_HC_35TO39 + 
+  final$TOTAL_GP_EXL_HC_40TO44 + final$TOTAL_GP_EXL_HC_45TO49 + 
+  final$TOTAL_GP_HC_50TO54 + final$TOTAL_GP_HC_55TO59
+
+final$gpsover60 <- final$TOTAL_GP_HC_60TO64 + final$TOTAL_GP_HC_65TO69 +
+  final$TOTAL_GP_HC_65TO69 + final$TOTAL_GP_HC_70PLUS
+
+names(final)
+
+library(tableone)
+write.csv(database, "data.csv")
+database <- read.csv("data.csv")
+
+database$TOTAL_NURSES <- as.numeric(database$TOTAL_NURSES_HC)
+
+vars <- c("weighted.mean.IMDScore..All.Ages.", "TOTAL_PATIENTS", "TOTAL_GP_HC", "gpsintraining", "MALE_GP_HC", "FEMALE_GP_HC", "TOTAL_ADMIN_HC", "under5s", "under65s", "over65s" , "gpsunder60" , "gpsover60", "region" , "TOTAL_NURSES")
+catVars <- c("activity", "region")
+
+tab2 <- CreateTableOne(data=imputed_data, vars= vars, factorVars = catVars, strata = "activity")
+
+print(tab2, showAllLevels = TRUE, nonnormal = TRUE, exact = "region")
+
+summary(tab2)
+
+#####plots
+ggboxplot(database, x = "activity", y = "weighted.mean.IMDScore..All.Ages.", ylab = "Index of Multiple Deprivation Score", xlab = "Swabbing Activity")
+
+
+ggboxplot(database, x = "activity", y = "TOTAL_STAFF", ylab = "Total Number of Staff", xlab = "Swabbing Activity")
+
+#######################################################################################
+##########MODEL ESTIMATION (MNL)
+
+install.packages("apollo")
+library(apollo)
+apollo_initialise()
+
+### Set core controls
+apollo_control = list(modelName = "MNL_RP_covariates",
+                      modelDescr = "MNL model",
+                      indivID = "PracticeCode",
+                      outputDirectory = "output")
+apollo_beta=c(asc_notsignedup = 0,
+              asc_inactive= 0,
+              asc_active = 0, 
+              b_gpsi= 0,
+              b_gpsa = 0,
+              b_under65si = 0,
+              b_under65sa = 0, 
+              b_region1i = 0,
+              b_region1a = 0,
+              b_region2i = 0,
+              b_region2a = 0,
+              b_region4i = 0,
+              b_region4a = 0,
+              b_region5 = 0,
+              b_imdi = 0,
+              b_imda = 0,
+              b_train0i = 0,
+              b_train1i = 0,
+              b_train0a = 0,
+              b_train1a = 0,
+              b_gpsover60i = 0,
+              b_gpsover60a = 0,
+              b_staff = 0)
+#V[["signedup"]] = asc_signedup + b_adminstaff * TOTAL_ADMIN_HC + b_gps * TOTAL_GP_HC + b_imd * weighted.mean.IMDScore..All.Ages. + b_region * region + b_trainees * traineesprop2 + b_nurses * TOTAL_NURSES + b_patients * TOTAL_PATIENTS + b_gpsmale * malegpprop2 + b_gpsfemale * femalegpprop2 + b_gpsover60 * over60prop2 + b_under5s * under5sprop2 + b_under65s * under65sprop2 + b_over65s * over65sprop2
+
+###setting vector parameters
+
+#apollo_beta=c(asc_notsignedup = 0,
+#              asc_signedup = 0,
+#              b_region0 = 0,
+#              b_region1 = 0,
+#              b_region2 = 0,
+#              b_region3 = 0,
+#              b_region4 = 0,
+#              b_region5 = 0,
+#              b_region6 = 0)
+
+##fix variables
+
+apollo_fixed = c("asc_notsignedup", "b_region1i", "b_region1a" , "b_train0i" , "b_train0a")
+table(database$activity)
+
+###validate inputs
+apollo_inputs=apollo_validateInputs()
+
+
+apollo_attach(apollo_beta,
+              apollo_inputs)
+
+on.exit(apollo_detach(apollo_beta,
+                      apollo_inputs))
+
+apollo_probabilities=function(apollo_beta, apollo_inputs, functionality = "estimate")
+  
+{
+  ### Attach inputs and detach after function exit
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  ### Create list of probabilities P
+  P = list()
+  
+  ### List of utilities: these must use the same names as in mnl_settings, order is irrelevant
+  V = list()
+  V[["notsignedup"]] = asc_notsignedup 
+  V[["inactive"]] = asc_inactive + asc_inactive + b_gpsover60i * over60prop2 +
+    b_region1i * (region1 == 1) + b_region2i * (region1 ==2) +
+    b_region4i * (region1 == 4) + b_region5 * (region1 == 5) + b_under65si * under65sprop2 + b_imdi * weighted.mean.IMDScore..All.Ages. +
+    b_train0i * (training == 0) + b_train1i * (training == 1) + b_staff * staffper1000patients + b_gpsi * GPsprop 
+  
+  V[["active"]] = asc_active + b_gpsover60a * over60prop2 +
+    + b_region1a * (region1 == 1) + b_region2a * (region1 ==2)  +
+    b_region4a * (region1 == 4) + b_region5 * (region1 == 5) + b_under65sa * under65sprop2 + b_imda * weighted.mean.IMDScore..All.Ages. +
+    b_train0a * (training == 0) + b_train1a * (training == 1) + b_staff * staffper1000patients + b_gpsa * GPsprop 
+  
+  
+  ### Define settings for MNL model component
+  mnl_settings = list(
+    alternatives = c(notsignedup = 0, inactive = 1, active = 2),
+    avail = list(notsignedup = 1, inactive=1, active=1),
+    choiceVar = activity,
+    utilities = V)
+  
+  ### Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  ### Take product across observation for same individual
+  ## P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  ### Prepare and return outputs of function
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+### Estimate model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+#table(database$activity)
+
+
+#apollo_modelOutput(model)
+##s=list(printT1=TRUE)
+apollo_modelOutput(model)
+
+apollo_saveOutput(model)
+
+##########Testing
+###LR test
+apollo_lrTest(model12,
+              model6)
+##cross validation
+apollo_outOfSample(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+###predictions
+predictions_base = apollo_prediction(model, apollo_probabilities, apollo_inputs,
+                                     prediction_settings=list(runs=30))
+#conditions
+database$weighted.mean.IMDScore..All.Ages. = 0.5 * database$weighted.mean.IMDScore..All.Ages.
+database$GPsprop = 0.5 *database$GPsprop
+
+### Rerun predictions with the new data
+apollo_inputs = apollo_validateInputs()
+predictions_new = apollo_prediction(model, apollo_probabilities, apollo_inputs)
+# Sample data
+IMD <- c(0.2, 0.4 , 0.6, 0.8, 1.0)  # Variable levels
+active <- c(0.29, 0.24, 0.22, 0.19, 0.17)  # Probabilities of outcome 1 for each variable level
+inactive <- c(0.23, 0.21, 0.20, 0.19, 0.18)  # Probabilities of outcome 2 for each variable level
+
+
+data <- data.frame(IMD, active, inactive)
+data_long <- tidyr::gather(data, key = "Status", value = "Probability", -IMD)
+
+graph2 <- ggplot(data_long, aes(x = IMD, y = Probability, fill = Status)) +
+  geom_col(position = "stack") +
+  xlab("Percentage Change in IMD Score") +
+  ylab("Probability of activity or inactivity") +
+  theme_minimal() +
+  scale_fill_manual(values = c("grey", "black")) +
+  theme(legend.position = "top") + coord_flip()
+library("gridExtra")
+
+grid.arrange(graph1, graph2, ncol = 2)
+
+
